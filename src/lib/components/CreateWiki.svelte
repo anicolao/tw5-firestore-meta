@@ -41,7 +41,7 @@
         }, delay);
       });
     function getStatus(prefix: string) {
-      return async () => {
+      return async (): Promise<any> => {
         operationStatus = await get(`${prefix}${opName}`, $accessToken);
         const response = operationStatus?.response;
         const responseType = response ? response["@type"] : "";
@@ -184,36 +184,6 @@
     ).catch((err) => {
       console.error(err);
     });
-  }
-
-  let manualProjectId = "enter_an_id";
-  async function getRulesets() {
-    const createRuleset = `https://firebaserules.googleapis.com/v1/projects/${manualProjectId}/rulesets`;
-    const rulesets = await get(createRuleset, $accessToken);
-    console.log("rules: ", rulesets);
-  }
-  async function writeRuleset() {
-    const base = `https://firebaserules.googleapis.com/v1/`;
-    const createRuleset = `${base}projects/${manualProjectId}/rulesets`;
-    const rulesets = await get(createRuleset, $accessToken);
-    console.log("rules: ", rulesets);
-    const ruleSet = {
-      source: {
-        files: [
-          {
-            content:
-              "rules_version = '2';\n\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if request.auth != null;\n    }\n  }\n}",
-            name: "firestore.rules",
-          },
-        ],
-      },
-      metadata: {
-        services: ["cloud.firestore"],
-      },
-    };
-    const rulesetCreated = await post(createRuleset, ruleSet, $accessToken);
-    opName = rulesetCreated.name;
-    console.log("operation: ", rulesetCreated);
   }
 
   const auth = firebase.auth;
