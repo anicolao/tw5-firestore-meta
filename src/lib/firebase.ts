@@ -1,4 +1,3 @@
-console.log("firebase start");
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { initializeFirestore } from "firebase/firestore";
@@ -14,7 +13,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-console.log("passed app to getAuth");
 const auth = getAuth(app);
 
 const firebase = {
@@ -39,5 +37,3 @@ if (!import.meta.env.PROD) {
 }
 
 export default firebase;
-
-console.log("firebase end");
