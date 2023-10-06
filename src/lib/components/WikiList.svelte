@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { page } from "$app/stores";
   import firebase from "$lib/firebase";
   import { user } from "$lib/globals";
+  import { setWikiConfiguration } from "$lib/localstorage";
   import { collection, onSnapshot } from "firebase/firestore";
 
     let wikis: any[] = [];
@@ -10,6 +12,7 @@
         changed.forEach(wiki => {
             const w = wiki.doc.data();
             w.url = `/tw/${w.projectId.split("-")[1]}`;
+            setWikiConfiguration($page.url, w)
             wikis.push(w);
             wikis = wikis;
         });
