@@ -1,6 +1,7 @@
+console.log("firebase start");
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
+import { initializeFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
 	apiKey: "AIzaSyAAU8G6_I93RuQsfFdOf5wwdU4Wpn3cTXk",
@@ -13,13 +14,16 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-const auth = getAuth();
+console.log("passed app to getAuth");
+const auth = getAuth(app);
 
 const firebase = {
 	app,
 	auth,
 	google_auth_provider: new GoogleAuthProvider(),
-	firestore: getFirestore(),
+	firestore: initializeFirestore(app, {
+		experimentalForceLongPolling: true,
+	}),
 };
 
 firebase.google_auth_provider.addScope(
@@ -30,7 +34,10 @@ firebase.google_auth_provider.addScope(
 );
 
 if (!import.meta.env.PROD) {
+	console.log("no emulator");
 	//connectFirestoreEmulator(firebase.firestore, "localhost", 8080);
 }
 
 export default firebase;
+
+console.log("firebase end");
