@@ -4,7 +4,14 @@
   import { accessToken, user } from "$lib/globals";
   import { get, httpDelete } from "$lib/http";
   import { setWikiConfiguration } from "$lib/localstorage";
-  import { collection, deleteDoc, doc, onSnapshot, updateDoc } from "firebase/firestore";
+  import {
+    collection,
+    deleteDoc,
+    doc,
+    onSnapshot,
+    setDoc,
+    updateDoc,
+  } from "firebase/firestore";
 
   let wikis: any[] = [];
   const wikiCollection = collection(
@@ -41,6 +48,8 @@
         cleanupWiki();
       } else if (wiki.type !== "removed") {
         wikis.push(w);
+      } else if (wiki.type === "removed") {
+        wikis = wikis.filter((f) => w.projectId !== f.projectId);
       }
       wikis = wikis;
     });
@@ -57,8 +66,23 @@
   }
   function removeWiki(w: any) {
     return () => {
-      console.log("REMOVE ", w);
+      deleteDoc(doc(wikiCollection, w.projectId));
     };
+  }
+
+  let shareEmail = "";
+  function share(w: any) {
+    return () => {
+      console.log(`Should share with ${shareEmail}`);
+      const shareCollection = collection(
+        firebase.firestore,
+        `users/${shareEmail}/wikis`
+      );
+      setDoc(doc(shareCollection, w.projectId), w);
+    };
+  }
+  function invalidEmail(email: string) {
+    return !email.match(/^[^@]+@([^\.]+\.)+[^\.]+/);
   }
 </script>
 
@@ -66,6 +90,10 @@
   {#each wikis as wiki (wiki.projectId)}
     <li>
       <a href={wiki.url}>{wiki.displayName}</a>
+      <input type="text" bind:value={shareEmail} />
+      <button disabled={invalidEmail(shareEmail)} on:click={share(wiki)}
+        >Share with "{shareEmail}"</button
+      >
       {#if owner(wiki)}
         <button on:click={deleteWiki(wiki)}>Delete</button>
       {:else}
