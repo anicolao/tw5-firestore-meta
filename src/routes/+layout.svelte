@@ -1,10 +1,10 @@
 <script lang="ts">
+  import { signin } from "$lib/auth";
   import Instructions from "$lib/components/Instructions.svelte";
   import firebase from "$lib/firebase";
-  import { accessMessage, accessToken, user } from "$lib/globals";
+  import { accessMessage, accessToken, expiry, user } from "$lib/globals";
   import {
     onAuthStateChanged,
-    signInWithPopup,
   } from "firebase/auth";
   import { doc, setDoc } from "firebase/firestore";
 
@@ -36,8 +36,7 @@
   });
 
   $accessToken = "Sign in to get an access token.";
-  let expiry = 0;
-  $: endTime = new Date().getTime() + expiry * 1000;
+  $: endTime = new Date().getTime() + $expiry * 1000;
   $: timeLeft = endTime - new Date().getTime();
   if (typeof window !== "undefined") {
     window.setInterval(() => {
@@ -49,16 +48,6 @@
     : `Valid token: ${$accessToken.substring(0, 10)}... expires in ${Math.trunc(
         timeLeft / 1000
       )}s`;
-  function signin() {
-    signInWithPopup(auth, gAuthProvider)
-      .then((result) => {
-        $accessToken = (result as any)._tokenResponse.oauthAccessToken;
-        expiry = (result as any)._tokenResponse.oauthExpireIn;
-      })
-      .catch((message) => {
-        console.error(message);
-      });
-  }
 
 </script>
 

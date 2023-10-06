@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from "$app/stores";
+  import { signin } from "$lib/auth";
   import firebase from "$lib/firebase";
   import { accessMessage, accessToken, user } from "$lib/globals";
   import { get, post } from "$lib/http";
@@ -223,12 +224,15 @@
   }
 </script>
 
+{#if $accessMessage.startsWith("Sign")}
+<p>{$accessMessage}
+  <button on:click={signin}>Sign In</button>
+  </p>
+{:else}
 <pre>{$accessMessage}</pre>
 <input type="text" bind:value={displayName} />
 <button on:click={createProject}>Create TiddlyWiki</button>
-<input type="text" bind:value={manualProjectId} />
-<button on:click={getRulesets}>Get Rulesets</button>
-<button on:click={writeRuleset}>Write Ruleset</button>
+{/if}
 <br /><button on:click={signout}>Sign Out</button>
 
 <style>

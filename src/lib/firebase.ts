@@ -27,9 +27,6 @@ const firebase = {
 firebase.google_auth_provider.addScope(
 	"https://www.googleapis.com/auth/cloud-platform",
 );
-firebase.google_auth_provider.addScope(
-	"https://www.googleapis.com/auth/firebase",
-);
 
 if (!import.meta.env.PROD) {
 	console.log("no emulator");
