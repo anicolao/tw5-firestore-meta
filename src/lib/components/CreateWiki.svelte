@@ -9,7 +9,6 @@
   import { doc, setDoc } from "firebase/firestore";
 
   let displayName = "Untitled";
-  let opName = "";
   const sleep = (delay: number): Promise<boolean> =>
     new Promise((resolve) => {
       setTimeout(() => {
@@ -30,6 +29,13 @@
     }
     return operationStatus;
   }
+  async function callAPI(api: string, payload: any) {
+    let extract = /^https:..[^/]+.[^/]+./;
+    let prefixMatch = extract.exec(api);
+    let prefix = prefixMatch !== null ? prefixMatch[0] : api;
+    const operationObject = await post(api, payload, $accessToken);
+    return pollOperation(prefix, operationObject.name, $accessToken);
+  }
   async function createProject() {
     function transformDisplayName(name: string) {
       return name
@@ -40,62 +46,23 @@
     const projectId = `tw5-${transformDisplayName(displayName)}-${Math.trunc(
       Math.random() * 10000
     )}`;
-    console.log("ABOUT TO POST ", $accessToken, $accessMessage);
-    const operationObject = await post(
-      "https://cloudresourcemanager.googleapis.com/v3/projects",
-      {
-        projectId,
-        displayName,
-      },
-      $accessToken
-    );
-    opName = operationObject.name;
-    let projectNumber = 0;
-    console.log(`Create: ${projectId} => ${opName}`);
-    let wikiInfo = { error: "Not initialized" };
-    let result = await pollOperation(
-      "https://cloudresourcemanager.googleapis.com/v1/",
-      opName,
-      $accessToken
-    );
+    const createProjectAPI =
+      "https://cloudresourcemanager.googleapis.com/v3/projects";
+    let result = await callAPI(createProjectAPI, {
+      projectId,
+      displayName,
+    });
     let response = result.response;
-    projectNumber = response.projectNumber;
-    const appInfo = await get(
-      "https://firebase.googleapis.com/v1beta1/availableProjects",
-      $accessToken
-    );
-    console.log("Apps: ", appInfo);
-    const firebaseProject = await post(
-      `https://firebase.googleapis.com/v1beta1/projects/${projectId}:addFirebase`,
-      {},
-      $accessToken
-    );
-    opName = firebaseProject.name;
-    result = await pollOperation(
-      "https://firebase.googleapis.com/v1beta1/",
-      opName,
-      $accessToken
-    );
-    const webApp = await post(
-      `https://firebase.googleapis.com/v1beta1/projects/${projectId}/webApps`,
-      {
-        displayName,
-      },
-      $accessToken
-    );
-    opName = webApp.name;
-    result = await pollOperation(
-      "https://firebase.googleapis.com/v1beta1/",
-      opName,
-      $accessToken
-    );
+    const addFirebaseProject = `https://firebase.googleapis.com/v1beta1/projects/${projectId}:addFirebase`;
+    result = await callAPI(addFirebaseProject, {});
+    const addWebApp = `https://firebase.googleapis.com/v1beta1/projects/${projectId}/webApps`;
+    result = await callAPI(addWebApp, { displayName });
     response = result.response;
     const firebaseConfig = await get(
       `https://firebase.googleapis.com/v1beta1/${response.name}/config`,
       $accessToken
     );
-    console.log("SETTING wikiInfo");
-    wikiInfo = { ...firebaseConfig, displayName, owner: $user.email };
+    let wikiInfo = { ...firebaseConfig, displayName, owner: $user.email };
     console.log("Web App Config: ", firebaseConfig);
     const firebaseConfigString = JSON.stringify(firebaseConfig);
     if (typeof window !== undefined) {
@@ -103,34 +70,17 @@
       window.localStorage.setItem(key, firebaseConfigString);
     }
     const firestoreAPI = `projects/${projectId}/services/firestore.googleapis.com`;
-    const apiEnabled = await post(
-      `https://serviceusage.googleapis.com/v1/${firestoreAPI}:enable`,
-      {},
-      $accessToken
-    );
-    opName = apiEnabled.name;
-    result = await pollOperation(
-      "https://serviceusage.googleapis.com/v1/",
-      opName,
-      $accessToken
-    );
-    const db = await post(
-      "https://appengine.googleapis.com/v1/apps",
+    const enableFirestore = `https://serviceusage.googleapis.com/v1/${firestoreAPI}:enable`;
+    result = await callAPI(enableFirestore, {});
+    const createFirestore = "https://appengine.googleapis.com/v1/apps";
+    result = await callAPI(createFirestore, 
       {
         databaseType: "CLOUD_FIRESTORE",
         id: projectId,
         locationId: "us-central",
-      },
-      $accessToken
-    );
-    opName = db.name;
-    result = await pollOperation(
-      "https://appengine.googleapis.com/v1/",
-      opName,
-      $accessToken
+      }
     );
     const createRuleset = `https://firebaserules.googleapis.com/v1/projects/${projectId}/rulesets`;
-
     let rulesets = { error: "startup" };
     while (rulesets?.error) {
       if (rulesets.error !== "startup") {
@@ -167,7 +117,7 @@
       $accessToken
     );
     console.log("CREATE release: ", createRelease);
-    
+
     console.log("GETTING wikiInfo", wikiInfo);
     if (wikiInfo?.error === undefined) {
       setWikiConfiguration($page.url, wikiInfo);
