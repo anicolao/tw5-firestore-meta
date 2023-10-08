@@ -8,6 +8,29 @@
   import { signOut } from "firebase/auth";
   import { doc, setDoc } from "firebase/firestore";
 
+  let progress = -1;
+  let polls = 0;
+  interface StageProgress {
+    name: string;
+    state: "unstarted" | "started" | "done";
+    error?: string;
+  }
+  let stages: StageProgress[] = [
+    { name: "Creating Google Cloud Project NAME", state: "unstarted" },
+    { name: "Adding firebase to project", state: "unstarted" },
+    { name: "Creating firebase web app", state: "unstarted" },
+    { name: "Enabling firestore API", state: "unstarted" },
+    { name: "Creating firestore database", state: "unstarted" },
+  ];
+  $: if (progress > -1) {
+    if (stages[0].state === "unstarted") {
+      stages[0].name = `Creating Google Cloud Project ${displayName}`;
+      for (let s = 0; s < stages.length; ++s) {
+        stages[s].state = "unstarted";
+      }
+      stages[0].state = "started";
+    }
+  }
   let displayName = "Untitled";
   const sleep = (delay: number): Promise<boolean> =>
     new Promise((resolve) => {
@@ -25,6 +48,7 @@
     if (operationStatus?.done !== true) {
       console.log("Try again in 1000...");
       await sleep(1000);
+      polls++;
       return pollOperation(prefix, opName, accessToken);
     }
     return operationStatus;
@@ -33,6 +57,12 @@
     let extract = /^https:..[^/]+.[^/]+./;
     let prefixMatch = extract.exec(api);
     let prefix = prefixMatch !== null ? prefixMatch[0] : api;
+    if (progress >= 0) {
+      stages[progress].state = "done";
+    }
+    polls = 0;
+    progress += 1;
+    stages[progress].state = "started";
     const operationObject = await post(api, payload, $accessToken);
     return pollOperation(prefix, operationObject.name, $accessToken);
   }
@@ -48,6 +78,7 @@
     )}`;
     const createProjectAPI =
       "https://cloudresourcemanager.googleapis.com/v3/projects";
+
     let result = await callAPI(createProjectAPI, {
       projectId,
       displayName,
@@ -55,6 +86,7 @@
     let response = result.response;
     const addFirebaseProject = `https://firebase.googleapis.com/v1beta1/projects/${projectId}:addFirebase`;
     result = await callAPI(addFirebaseProject, {});
+    stages = stages;
     const addWebApp = `https://firebase.googleapis.com/v1beta1/projects/${projectId}/webApps`;
     result = await callAPI(addWebApp, { displayName });
     response = result.response;
@@ -73,19 +105,26 @@
     const enableFirestore = `https://serviceusage.googleapis.com/v1/${firestoreAPI}:enable`;
     result = await callAPI(enableFirestore, {});
     const createFirestore = "https://appengine.googleapis.com/v1/apps";
-    result = await callAPI(createFirestore, 
-      {
-        databaseType: "CLOUD_FIRESTORE",
-        id: projectId,
-        locationId: "us-central",
-      }
-    );
+    result = await callAPI(createFirestore, {
+      databaseType: "CLOUD_FIRESTORE",
+      id: projectId,
+      locationId: "us-central",
+    });
     const createRuleset = `https://firebaserules.googleapis.com/v1/projects/${projectId}/rulesets`;
     let rulesets = { error: "startup" };
     while (rulesets?.error) {
       if (rulesets.error !== "startup") {
         console.log(`API not ready error: `, rulesets.error);
-        await sleep(5000);
+        polls++;
+        await sleep(1000);
+        polls++;
+        await sleep(1000);
+        polls++;
+        await sleep(1000);
+        polls++;
+        await sleep(1000);
+        polls++;
+        await sleep(1000);
       }
       rulesets = await get(createRuleset, $accessToken);
     }
@@ -128,7 +167,32 @@
     ).catch((err) => {
       console.error(err);
     });
+    progress = -1;
+    stages[0].state = "unstarted";
   }
+
+  /* testing for progress meter 
+  window.setInterval(() => {
+    if (progress === -1) {
+      polls = 0;
+      progress++;
+    } else if (progress >= stages.length) {
+      polls = 0;
+      progress = -1;
+    } else if (Math.random() > 0.85) {
+      polls = 0;
+      stages[progress].state = "done";
+      progress++;
+      if (progress < stages.length) {
+        stages[progress].state = "started";
+      } else {
+        stages.forEach((s) => (s.state = "unstarted"));
+      }
+    } else {
+      polls++;
+    }
+  }, 1000);
+  */
 
   const auth = firebase.auth;
   function signout() {
@@ -145,8 +209,21 @@
   </p>
 {:else}
   <pre>{$accessMessage}</pre>
-  <input type="text" bind:value={displayName} />
-  <button on:click={createProject}>Create TiddlyWiki</button>
+  {#if progress >= 0}
+    <ul>
+      {#each stages as stage}
+        <li class={stage.state}>
+          {stage.name}
+          {#if stage.state === "started"}{".".repeat(
+              polls
+            )}{/if}{#if stage?.error}{stage.error}{/if}
+        </li>
+      {/each}
+    </ul>
+  {:else}
+    <input type="text" bind:value={displayName} />
+    <button on:click={createProject}>Create TiddlyWiki</button>
+  {/if}
 {/if}
 <br /><button on:click={signout}>Sign Out</button>
 
@@ -156,5 +233,38 @@
   }
   button {
     margin: 0.4em;
+  }
+
+  ul {
+    list-style: none;
+  }
+  li.started:before {
+    content: '⌛';
+    padding: 10px;
+  }
+  li.unstarted:before {
+    content: '🔲';
+    padding: 10px;
+  }
+  li.done:before {
+    content: '✅';
+    padding: 10px;
+  }
+  li {
+    margin: 0.5em;
+    font-family: sans-serif;
+    font-size: 14px;
+  }
+
+  .unstarted {
+    color: grey;
+  }
+  .started {
+    font-weight: bold;
+    color: black;
+  }
+  .done {
+    font-weight: bold;
+    color: green;
   }
 </style>
