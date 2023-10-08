@@ -89,16 +89,36 @@
 <ul>
   {#each wikis as wiki (wiki.projectId)}
     <li>
-      <a href={wiki.url}>{wiki.displayName}</a>
+      <a href={wiki.url}>{wiki.displayName}</a><span/>
       <input type="text" bind:value={shareEmail} />
       <button disabled={invalidEmail(shareEmail)} on:click={share(wiki)}
         >Share with "{shareEmail}"</button
       >
       {#if owner(wiki)}
-        <button on:click={deleteWiki(wiki)}>Delete</button>
+        <button on:click={deleteWiki(wiki)}>🗑</button>
       {:else}
         <button on:click={removeWiki(wiki)}>Remove</button>
       {/if}
     </li>
   {/each}
 </ul>
+
+<style>
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  li {
+    padding: 0.5em;
+    border-bottom: 1px dashed lightgray;
+    display: flex;
+    flex-direction: row;
+  }
+  li>* {
+    margin: 0.5em;
+  }
+  li>span {
+    flex-grow: 1;
+  }
+</style>
