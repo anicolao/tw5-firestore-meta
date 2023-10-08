@@ -29,6 +29,7 @@
         stages[s].state = "unstarted";
       }
       stages[0].state = "started";
+      stages = stages;
     }
   }
   let displayName = "Untitled";
@@ -62,7 +63,7 @@
     }
     polls = 0;
     progress += 1;
-    stages[progress].state = "started";
+    if (progress > 0) stages[progress].state = "started";
     const operationObject = await post(api, payload, $accessToken);
     return pollOperation(prefix, operationObject.name, $accessToken);
   }

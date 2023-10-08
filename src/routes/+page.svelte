@@ -13,8 +13,7 @@
   TiddlyWiki5 instance. For this to work, you need to have already accepted the
   Firestore terms of service which you can do by visiting the <a
     href="https://console.firebase.google.com/">Firebase Console</a
-  >
-  before creating your wiki.
+  > and creating at least one Firebase project before creating your wiki.
 </p>
 <p>
   You can also use this website to access other people's firestore wikis if they
